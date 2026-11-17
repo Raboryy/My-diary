@@ -1,0 +1,11 @@
+{
+  "name": "Diário Lunar",
+  "short_name": "Diário Lunar",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#120c17",
+  "theme_color": "#120c17",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

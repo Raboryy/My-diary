@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Diário Lunar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Diário Lunar">
+<meta name="theme-color" content="#120c17">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;height:100%;overflow:hidden;background:#120c17;color:#e9dfc9;font-family:"Palatino","Palatino Linotype",Georgia,serif;-webkit-text-size-adjust:100%;}
+body{
+  background-color:#120c17;
+  background-image:
+    radial-gradient(1px 1px at 20px 30px,rgba(233,219,168,.85),transparent),
+    radial-gradient(1px 1px at 90px 120px,rgba(233,219,168,.6),transparent),
+    radial-gradient(1.5px 1.5px at 160px 60px,rgba(233,219,168,.75),transparent),
+    radial-gradient(1px 1px at 130px 175px,rgba(233,219,168,.5),transparent),
+    linear-gradient(180deg,#1b1126 0%,#120c17 60%,#0e1511 100%);
+  background-size:200px 200px,200px 200px,200px 200px,200px 200px,100% 100%;
+  background-repeat:repeat,repeat,repeat,repeat,no-repeat;
+}
+.hidden{display:none !important;}
+button,input,textarea{font-family:inherit;color:inherit;}
+input,textarea{-webkit-user-select:text;user-select:text;font-size:17px;}
+button{cursor:pointer;}
+h2{margin:0;font-weight:normal;font-style:italic;font-size:24px;color:#c9a54e;}
+h3{margin:0 0 8px;font-weight:normal;font-style:italic;color:#c9a54e;font-size:19px;}
+
+/* ---------- PIN ---------- */
+.lock{position:fixed;top:0;left:0;right:0;bottom:0;z-index:50;background:#120c17;background-image:linear-gradient(180deg,#1f1230 0%,#120c17 65%,#0e1511 100%);display:-webkit-box;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;overflow:auto;}
+.lock-inner{text-align:center;padding:20px;width:100%;max-width:340px;}
+.moon{font-size:64px;color:#c9a54e;line-height:1;}
+.lock-title{margin:8px 0 4px;font-weight:normal;font-style:italic;font-size:34px;color:#e9dfc9;letter-spacing:1px;}
+.lock-sub{margin:0 0 22px;color:#9b8fa8;font-style:italic;}
+.dots{margin:0 0 26px;height:20px;}
+.dots span{display:inline-block;width:16px;height:16px;border-radius:50%;border:2px solid #c9a54e;margin:0 9px;}
+.dots span.on{background:#c9a54e;}
+.dots.shake{-webkit-animation:shake .4s;animation:shake .4s;}
+@-webkit-keyframes shake{0%,100%{-webkit-transform:translateX(0)}20%{-webkit-transform:translateX(-12px)}40%{-webkit-transform:translateX(12px)}60%{-webkit-transform:translateX(-8px)}80%{-webkit-transform:translateX(8px)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-12px)}40%{transform:translateX(12px)}60%{transform:translateX(-8px)}80%{transform:translateX(8px)}}
+.pad{display:grid;grid-template-columns:1fr 1fr 1fr;grid-gap:14px;max-width:270px;margin:0 auto;}
+.key{height:70px;border-radius:50%;border:1px solid rgba(201,165,78,.55);background:rgba(35,26,46,.8);font-size:28px;color:#e9dfc9;outline:none;}
+.key:active{background:#c9a54e;color:#120c17;}
+.key.empty-key{visibility:hidden;}
+
+/* ---------- Layout ---------- */
+.app{position:fixed;top:0;left:0;right:0;bottom:0;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;}
+.top{-webkit-flex:none;flex:none;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-between;justify-content:space-between;padding:10px 16px;border-bottom:1px solid rgba(201,165,78,.3);background:rgba(18,12,23,.9);}
+.brand{font-style:italic;font-size:22px;color:#c9a54e;letter-spacing:1px;}
+.icon-btn{background:none;border:1px solid rgba(201,165,78,.4);border-radius:8px;width:40px;height:36px;font-size:18px;color:#c9a54e;margin-left:8px;}
+.main{-webkit-flex:1;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;}
+.view{max-width:760px;margin:0 auto;padding-bottom:30px;}
+.tabs{-webkit-flex:none;flex:none;display:-webkit-box;display:-webkit-flex;display:flex;border-top:1px solid rgba(201,165,78,.3);background:#120c17;}
+.tab{-webkit-box-flex:1;-webkit-flex:1;flex:1;background:none;border:none;padding:10px 4px 12px;color:#9b8fa8;font-size:14px;font-style:italic;}
+.tab b{display:block;font-size:22px;font-style:normal;font-weight:normal;margin-bottom:2px;}
+.tab.active{color:#c9a54e;}
+
+.row-head{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-between;justify-content:space-between;margin-bottom:14px;}
+.btn{background:rgba(201,165,78,.14);border:1px solid #c9a54e;color:#e9dfc9;border-radius:10px;padding:10px 16px;font-size:16px;position:relative;overflow:hidden;display:inline-block;}
+.btn:active{background:#c9a54e;color:#120c17;}
+.btn.ghost{background:none;}
+.btn.danger{border-color:#b4577a;color:#d98aa8;}
+.btn.full{display:block;width:100%;margin-top:10px;}
+.btn.small{padding:6px 12px;font-size:14px;}
+.btn[disabled]{opacity:.3;}
+.file-btn input{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;}
+.card{border:3px double rgba(201,165,78,.4);border-radius:12px;background:rgba(35,26,46,.78);padding:14px;margin-bottom:14px;}
+.empty{text-align:center;color:#9b8fa8;font-style:italic;padding:30px 10px;line-height:1.6;}
+.hint{color:#9b8fa8;font-size:14px;font-style:italic;line-height:1.5;margin:6px 2px 12px;}
+.lbl{color:#9b8fa8;font-size:14px;font-style:italic;}
+.field{width:100%;background:rgba(18,12,23,.7);border:1px solid rgba(201,165,78,.4);border-radius:8px;padding:10px 12px;margin-top:6px;outline:none;color:#e9dfc9;}
+
+/* ---------- Diário ---------- */
+.page{border:3px double rgba(201,165,78,.35);border-radius:12px;background:rgba(35,26,46,.78);padding:14px 16px;margin-bottom:12px;}
+.page:active{background:rgba(60,44,76,.9);}
+.page-date{color:#c9a54e;font-size:14px;font-style:italic;}
+.page-title{font-size:20px;margin:4px 0;}
+.page-snip{color:#b9aebb;font-size:15px;line-height:1.4;}
+.paper{border:3px double rgba(201,165,78,.45);border-radius:12px;background:#231a2e;padding:16px;}
+.e-date{color:#c9a54e;font-style:italic;font-size:18px;}
+.e-edited{color:#9b8fa8;font-size:13px;font-style:italic;margin:2px 0 8px;min-height:16px;}
+.e-title{width:100%;background:none;border:none;border-bottom:1px solid rgba(201,165,78,.35);font-size:24px;font-style:italic;padding:6px 0;outline:none;color:#e9dfc9;}
+.e-text{width:100%;height:50vh;min-height:300px;background:none;border:none;outline:none;resize:none;color:#f1e8d3;font-family:"Snell Roundhand","Bradley Hand","Palatino",cursive,serif;font-size:22px;line-height:32px;margin-top:8px;padding:0;background-image:linear-gradient(transparent 31px,rgba(201,165,78,.2) 32px);background-size:100% 32px;background-attachment:local;}
+.e-status{text-align:right;color:#9b8fa8;font-size:13px;font-style:italic;}
+
+/* ---------- Checklists ---------- */
+.item{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-align-items:flex-start;align-items:flex-start;padding:10px 2px;border-top:1px solid rgba(201,165,78,.15);}
+.item:first-of-type{border-top:none;}
+.box{-webkit-flex:none;flex:none;width:28px;height:28px;border:2px solid #c9a54e;border-radius:50%;margin-right:12px;margin-top:1px;text-align:center;line-height:24px;font-size:17px;color:transparent;}
+.item.on .box{background:#c9a54e;color:#120c17;}
+.item.on .itxt{opacity:.5;}
+.itxt{-webkit-flex:1;flex:1;line-height:1.45;font-size:16.5px;}
+.ik{-webkit-flex:none;flex:none;margin-left:10px;color:#9b8fa8;font-size:13px;white-space:nowrap;padding-top:3px;}
+.x{-webkit-flex:none;flex:none;background:none;border:none;color:#b4577a;font-size:22px;padding:0 6px;}
+.due{display:block;font-size:13px;color:#9b8fa8;font-style:italic;margin-top:2px;}
+.due.late{color:#d98aa8;}
+.seg{display:-webkit-box;display:-webkit-flex;display:flex;margin-bottom:12px;}
+.seg-b{-webkit-flex:1;flex:1;background:none;border:1px solid rgba(201,165,78,.45);padding:8px;color:#9b8fa8;font-size:15px;}
+.seg-b:first-child{border-radius:8px 0 0 8px;}
+.seg-b:last-child{border-radius:0 8px 8px 0;}
+.seg-b.active{background:rgba(201,165,78,.22);color:#e9dfc9;}
+
+/* ---------- Música ---------- */
+.np-title{font-size:20px;font-style:italic;text-align:center;margin-bottom:10px;min-height:26px;}
+input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:rgba(201,165,78,.35);outline:none;margin:8px 0;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#c9a54e;}
+.times{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-justify-content:space-between;justify-content:space-between;color:#9b8fa8;font-size:13px;}
+.ctrls{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;margin-top:10px;}
+.cbtn{background:none;border:1px solid rgba(201,165,78,.5);color:#e9dfc9;border-radius:50%;width:52px;height:52px;font-size:20px;margin:0 7px;outline:none;}
+.cbtn.big{width:68px;height:68px;font-size:26px;background:rgba(201,165,78,.2);border-color:#c9a54e;}
+.cbtn.small{width:42px;height:42px;font-size:17px;color:#9b8fa8;}
+.cbtn.on{color:#c9a54e;border-color:#c9a54e;}
+.track{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;padding:12px 6px;border-top:1px solid rgba(201,165,78,.15);}
+.track .tn{-webkit-flex:1;flex:1;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.track .ts{color:#9b8fa8;font-size:13px;margin-left:10px;}
+.track.now .tn{color:#c9a54e;font-style:italic;}
+.track.now .tn:before{content:"\266A  ";}
+
+/* ---------- Refeições ---------- */
+.daynav{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin-bottom:12px;}
+.fdate{-webkit-flex:1;flex:1;text-align:center;font-style:italic;color:#c9a54e;font-size:18px;padding:0 8px;}
+.big-num{font-size:36px;color:#e9dfc9;line-height:1;}
+.bar{height:10px;border-radius:5px;background:rgba(201,165,78,.18);overflow:hidden;margin:8px 0 12px;}
+.bar i{display:block;height:100%;width:0;background:#c9a54e;}
+.bar.water i{background:#6f9f8f;}
+.water-row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-between;justify-content:space-between;}
+.water-row .btn{margin-left:6px;}
+.meal-h{margin-bottom:6px;}
+.meal-time{color:#c9a54e;font-size:20px;margin-right:10px;}
+.meal-title{font-style:italic;font-size:18px;}
+.obs{color:#b9aebb;font-size:14.5px;line-height:1.5;font-style:italic;border-top:1px dashed rgba(201,165,78,.3);margin-top:6px;padding-top:8px;}
+.meal-note{width:100%;height:56px;margin-top:10px;background:rgba(18,12,23,.7);border:1px solid rgba(201,165,78,.3);border-radius:8px;padding:8px 10px;font-size:15px;outline:none;color:#e9dfc9;resize:none;}
+details.card summary{color:#c9a54e;font-style:italic;font-size:18px;outline:none;}
+details.card ul{margin:10px 0 0;padding-left:20px;line-height:1.55;}
+.wk{display:-webkit-box;display:-webkit-flex;display:flex;padding:7px 0;border-top:1px solid rgba(201,165,78,.15);font-size:15px;}
+.wk span{-webkit-flex:1;flex:1;}
+.wk span:first-child{-webkit-flex:1.4;flex:1.4;}
+
+/* ---------- Extras ---------- */
+.modal{position:fixed;top:0;left:0;right:0;bottom:0;z-index:40;background:rgba(10,6,14,.88);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px;}
+.modal .card{max-width:560px;margin:0 auto 14px;background:#231a2e;}
+#sBox{width:100%;height:110px;background:rgba(18,12,23,.8);border:1px solid rgba(201,165,78,.4);border-radius:8px;padding:8px;font-size:13px;color:#e9dfc9;margin-top:8px;}
+#banner{position:fixed;top:12px;left:12px;right:12px;z-index:60;max-width:560px;margin:0 auto;background:#2b1d38;border:2px solid #c9a54e;border-radius:12px;padding:14px 16px;font-size:18px;font-style:italic;}
+#toast{position:fixed;left:16px;right:16px;bottom:90px;z-index:70;max-width:480px;margin:0 auto;background:#c9a54e;color:#120c17;border-radius:10px;padding:10px 14px;text-align:center;font-size:15px;}
+</style>
+</head>
+<body>
+
+<div id="lock" class="lock">
+  <div class="lock-inner">
+    <div class="moon">&#9790;</div>
+    <h1 class="lock-title">Diário Lunar</h1>
+    <p class="lock-sub">&#10022; diga a senha das sombras &#10022;</p>
+    <div id="dots" class="dots"><span></span><span></span><span></span><span></span></div>
+    <div id="pad" class="pad"></div>
+  </div>
+</div>
+
+<div id="app" class="app hidden">
+  <header class="top">
+    <div class="brand">&#9790; Diário Lunar &#9789;</div>
+    <div>
+      <button id="btnSettings" class="icon-btn" title="Ajustes">&#9881;&#xFE0E;</button><button id="btnLock" class="icon-btn" title="Trancar">&#10070;</button>
+    </div>
+  </header>
+
+  <main id="main" class="main">
+
+    <!-- DIÁRIO -->
+    <section id="v-diary" class="view">
+      <div id="diaryList">
+        <div class="row-head"><h2>Minhas páginas</h2><button id="btnNewPage" class="btn">&#10022; Nova página</button></div>
+        <div id="diaryEmpty" class="empty">O grimório está em branco...<br>escreva a primeira página.</div>
+        <div id="pageList"></div>
+      </div>
+      <div id="diaryEditor" class="hidden">
+        <div class="row-head"><button id="btnBack" class="btn ghost">&#8249; Páginas</button><button id="btnDelPage" class="btn ghost danger">Rasgar página</button></div>
+        <div class="paper">
+          <div id="eDate" class="e-date"></div>
+          <div id="eEdited" class="e-edited"></div>
+          <input id="eTitle" class="e-title" placeholder="Título da página..." maxlength="80">
+          <textarea id="eText" class="e-text" placeholder="Querido diário..."></textarea>
+          <div id="eStatus" class="e-status"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAREFAS -->
+    <section id="v-tasks" class="view hidden">
+      <div class="row-head"><h2>Tarefas &amp; lembretes</h2></div>
+      <div class="card">
+        <input id="tText" class="field" placeholder="O que preciso fazer?" maxlength="140">
+        <div style="margin-top:10px"><span class="lbl">Lembrar em (opcional)</span>
+        <input id="tDue" type="datetime-local" class="field"></div>
+        <button id="btnAddTask" class="btn full">&#10022; Adicionar</button>
+      </div>
+      <div class="seg">
+        <button class="seg-b active" data-f="open">Pendentes</button>
+        <button class="seg-b" data-f="done">Feitas</button>
+        <button class="seg-b" data-f="all">Todas</button>
+      </div>
+      <div id="taskList" class="card"></div>
+      <div id="taskEmpty" class="empty hidden">Nada por aqui...</div>
+      <p class="hint">Os lembretes aparecem como aviso na tela quando o app está aberto. O iOS 12 não permite notificações de sites.</p>
+    </section>
+
+    <!-- MÚSICAS -->
+    <section id="v-music" class="view hidden">
+      <div class="row-head"><h2>Trilha sonora</h2>
+        <label class="btn file-btn">&#65291; Adicionar músicas<input id="fileIn" type="file" accept="audio/*" multiple></label>
+      </div>
+      <div id="musicMsg" class="hint"></div>
+      <div class="card">
+        <div id="npTitle" class="np-title">Nenhuma música tocando</div>
+        <input id="seek" type="range" min="0" max="1000" value="0">
+        <div class="times"><span id="tCur">0:00</span><span id="tDur">0:00</span></div>
+        <div class="ctrls">
+          <button id="bShuf" class="cbtn small">&#8644;</button>
+          <button id="bPrev" class="cbtn">&#9198;&#xFE0E;</button>
+          <button id="bPlay" class="cbtn big">&#9654;&#xFE0E;</button>
+          <button id="bNext" class="cbtn">&#9197;&#xFE0E;</button>
+          <button id="bRep" class="cbtn small">&#8635;</button>
+        </div>
+      </div>
+      <div id="trackList" class="card"></div>
+      <div id="trackEmpty" class="empty">Sem músicas ainda.<br>Toque em "Adicionar músicas" e escolha arquivos .mp3 ou .m4a.</div>
+      <audio id="audio" preload="auto"></audio>
+    </section>
+
+    <!-- REFEIÇÕES -->
+    <section id="v-food" class="view hidden">
+      <div class="row-head"><h2>Refeições</h2><button id="fToday" class="btn ghost small">Hoje</button></div>
+      <div class="daynav">
+        <button id="fPrev" class="btn ghost">&#8249;</button>
+        <div id="fDate" class="fdate"></div>
+        <button id="fNext" class="btn ghost">&#8250;</button>
+      </div>
+      <div class="card">
+        <div class="big-num" id="kVal">0</div>
+        <div class="lbl">kcal marcadas &middot; plano de 1800 kcal</div>
+        <div class="bar"><i id="kBar"></i></div>
+        <div class="water-row">
+          <div><span class="lbl">Água</span> <b id="wVal" style="font-weight:normal;font-size:20px">0 L</b> <span class="lbl">/ 3,5 L</span></div>
+          <div><button id="wMinus" class="btn small ghost">&minus;250</button><button id="wPlus" class="btn small">+250 ml</button></div>
+        </div>
+        <div class="bar water" style="margin-bottom:0"><i id="wBar"></i></div>
+      </div>
+      <details class="card">
+        <summary>Regras do plano (todos os dias)</summary>
+        <ul>
+          <li>Plano hipocalórico e reeducação alimentar de 1800 kcal.</li>
+          <li>Água: 3,5 litros (água, água com limão, chá natural, suco detox de couve, limão e abacaxi).</li>
+          <li>Mix de fibras (maca peruana, psyllium e aveia, 50 g de cada) com frutas, shakes e sucos.</li>
+          <li>Mais refeições, em porções menores.</li>
+          <li>Evitar lanches, iFood, frituras e embutidos (liberado 1 vez na semana).</li>
+          <li>Adoçar bebidas com sucralose, stévia ou xilitol.</li>
+        </ul>
+      </details>
+      <div id="meals"></div>
+      <div class="card"><h3>Últimos 7 dias</h3><div id="week"></div></div>
+      <p class="hint">Baseado no plano alimentar de 16/11/2026. Os kcal mostrados são os do plano para cada item (primeira opção listada).</p>
+    </section>
+
+  </main>
+
+  <nav class="tabs">
+    <button id="tab-diary" class="tab" data-v="diary"><b>&#10086;</b>Diário</button>
+    <button id="tab-tasks" class="tab" data-v="tasks"><b>&#9998;&#xFE0E;</b>Tarefas</button>
+    <button id="tab-music" class="tab" data-v="music"><b>&#9835;</b>Músicas</button>
+    <button id="tab-food" class="tab" data-v="food"><b>&#10047;</b>Refeições</button>
+  </nav>
+</div>
+
+<div id="settings" class="modal hidden">
+  <div class="card">
+    <h3>Backup</h3>
+    <p class="hint">Gere o texto, copie e guarde em um lugar seguro (Notas, e-mail). Para restaurar, cole o texto aqui e toque em Restaurar. As músicas não entram no backup.</p>
+    <textarea id="sBox" placeholder="O backup aparece aqui..."></textarea>
+    <button id="sExport" class="btn full">Gerar backup</button>
+    <button id="sImport" class="btn full ghost">Restaurar do texto colado</button>
+  </div>
+  <div class="card">
+    <h3>Alterar PIN</h3>
+    <input id="sNewPin" class="field" type="tel" maxlength="4" placeholder="Novo PIN de 4 números">
+    <button id="sPin" class="btn full">Salvar novo PIN</button>
+  </div>
+  <div class="card">
+    <button id="sClose" class="btn full">Fechar</button>
+  </div>
+</div>
+
+<div id="banner" class="hidden"></div>
+<div id="toast" class="hidden"></div>
+
+<script>
+(function(){
+function $(id){return document.getElementById(id);}
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined&&txt!==null)e.textContent=txt;return e;}
+function pad2(n){return n<10?'0'+n:''+n;}
+var DIAS=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+var MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function fmtDate(ts){var d=new Date(ts);return DIAS[d.getDay()]+', '+d.getDate()+' de '+MESES[d.getMonth()]+' de '+d.getFullYear();}
+function fmtTime(ts){var d=new Date(ts);return pad2(d.getHours())+':'+pad2(d.getMinutes());}
+function fmtShort(ts){var d=new Date(ts);return pad2(d.getDate())+'/'+pad2(d.getMonth()+1);}
+function dayKey(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+
+var toastT=null;
+function toast(msg){var t=$('toast');t.textContent=msg;t.classList.remove('hidden');clearTimeout(toastT);toastT=setTimeout(function(){t.classList.add('hidden');},3200);}
+var store={
+  get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
+  set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){toast('Não consegui salvar (armazenamento cheio?)');return false;}}
+};
+
+/* ================= PIN ================= */
+var PIN_HASH='3338894980';
+function hash(s){var x=5381,i;s='lua::'+s;for(i=0;i<s.length;i++){x=((x<<5)+x+s.charCodeAt(i))|0;}return String(x>>>0);}
+var locked=true,buf='';
+function updateDots(){var s=$('dots').children,i;for(i=0;i<s.length;i++){s[i].className=i<buf.length?'on':'';}}
+function press(d){
+  if(buf.length>=4)return;
+  buf+=d;updateDots();
+  if(buf.length===4){setTimeout(checkPin,120);}
+}
+function backKey(){buf=buf.slice(0,-1);updateDots();}
+function checkPin(){
+  if(hash(buf)===store.get('dl_pin',PIN_HASH)){unlock();}
+  else{
+    var d=$('dots');d.classList.remove('shake');void d.offsetWidth;d.classList.add('shake');
+    buf='';setTimeout(updateDots,350);
+  }
+}
+(function buildPad(){
+  var keys=['1','2','3','4','5','6','7','8','9','','0','\u232B'];
+  keys.forEach(function(k){
+    var b=el('button','key',k);
+    if(k===''){b.className='key empty-key';}
+    else if(k==='\u232B'){b.onclick=backKey;}
+    else{b.onclick=function(){press(k);};}
+    $('pad').appendChild(b);
+  });
+})();
+function unlock(){
+  locked=false;buf='';updateDots();
+  $('lock').classList.add('hidden');$('app').classList.remove('hidden');
+  showView(lastView);checkReminders();
+}
+function lockNow(){
+  saveNow();
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  locked=true;buf='';updateDots();
+  $('settings').classList.add('hidden');
+  $('app').classList.add('hidden');$('lock').classList.remove('hidden');
+}
+$('btnLock').onclick=lockNow;
+
+/* ================= Navegação ================= */
+var VIEWS=['diary','tasks','music','food'];
+var lastView=store.get('dl_view','diary');
+function showView(n){
+  saveNow();
+  lastView=n;store.set('dl_view',n);
+  VIEWS.forEach(function(v){
+    $('v-'+v).classList.toggle('hidden',v!==n);
+    $('tab-'+v).classList.toggle('active',v===n);
+  });
+  $('main').scrollTop=0;
+  if(n==='diary'){if(!curId)renderDiary();}
+  else if(n==='tasks'){renderTasks();}
+  else if(n==='music'){renderMusic();}
+  else if(n==='food'){renderFood();}
+}
+VIEWS.forEach(function(v){$('tab-'+v).onclick=function(){showView(v);};});
+
+/* ================= Diário ================= */
+var entries=store.get('dl_entries',[]);
+var curId=null,saveTimer=null;
+function findEntry(id){var i;for(i=0;i<entries.length;i++){if(entries[i].id===id)return entries[i];}return null;}
+function renderDiary(){
+  var list=$('pageList');list.innerHTML='';
+  var sorted=entries.slice().sort(function(a,b){return b.created-a.created;});
+  $('diaryEmpty').classList.toggle('hidden',sorted.length>0);
+  sorted.forEach(function(e){
+    var row=el('div','page');
+    row.appendChild(el('div','page-date',fmtDate(e.created)+' \u00B7 '+fmtTime(e.created)));
+    row.appendChild(el('div','page-title',e.title||'Sem título'));
+    var snip=(e.text||'').replace(/\s+/g,' ').slice(0,120);
+    row.appendChild(el('div','page-snip',snip||'...'));
+    row.onclick=function(){openEntry(e.id);};
+    list.appendChild(row);
+  });
+}
+function openEntry(id){
+  var e=findEntry(id);if(!e)return;
+  curId=id;
+  $('eDate').textContent='Escrito em '+fmtDate(e.created)+' às '+fmtTime(e.created);
+  $('eEdited').textContent=e.edited?('editado em '+fmtShort(e.edited)+' às '+fmtTime(e.edited)):'';
+  $('eTitle').value=e.title||'';$('eText').value=e.text||'';$('eStatus').textContent='';
+  $('diaryList').classList.add('hidden');$('diaryEditor').classList.remove('hidden');
+  $('main').scrollTop=0;
+}
+function newEntry(){
+  var now=Date.now();
+  var e={id:uid(),created:now,edited:null,title:'',text:''};
+  entries.push(e);store.set('dl_entries',entries);
+  openEntry(e.id);
+  setTimeout(function(){$('eText').focus();},50);
+}
+function saveNow(){
+  clearTimeout(saveTimer);
+  if(!curId)return;
+  var e=findEntry(curId);if(!e)return;
+  var t=$('eTitle').value,x=$('eText').value;
+  if(t!==e.title||x!==e.text){
+    e.title=t;e.text=x;e.edited=Date.now();
+    store.set('dl_entries',entries);
+    $('eEdited').textContent='editado em '+fmtShort(e.edited)+' às '+fmtTime(e.edited);
+    $('eStatus').textContent='salvo \u2726 '+fmtTime(e.edited);
+  }
+}
+function schedSave(){$('eStatus').textContent='escrevendo...';clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,500);}
+function closeEditor(){
+  saveNow();
+  var e=findEntry(curId);
+  if(e&&!e.title&&!e.text){entries.splice(entries.indexOf(e),1);store.set('dl_entries',entries);}
+  curId=null;
+  $('diaryEditor').classList.add('hidden');$('diaryList').classList.remove('hidden');
+  renderDiary();
+}
+$('btnNewPage').onclick=newEntry;
+$('btnBack').onclick=closeEditor;
+$('eTitle').oninput=schedSave;$('eText').oninput=schedSave;
+$('btnDelPage').onclick=function(){
+  if(!confirm('Rasgar esta página para sempre?'))return;
+  var e=findEntry(curId);if(e)entries.splice(entries.indexOf(e),1);
+  store.set('dl_entries',entries);curId=null;
+  $('diaryEditor').classList.add('hidden');$('diaryList').classList.remove('hidden');
+  renderDiary();
+};
+
+/* ================= Tarefas ================= */
+var tasks=store.get('dl_tasks',[]);
+var tFilter='open';
+function parseLocal(v){
+  var m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v||'');
+  if(!m)return null;
+  return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]).getTime();
+}
+function renderTasks(){
+  var list=$('taskList');list.innerHTML='';
+  var now=Date.now();
+  var shown=tasks.filter(function(t){
+    if(tFilter==='open')return !t.done;
+    if(tFilter==='done')return t.done;
+    return true;
+  }).sort(function(a,b){
+    if(a.done!==b.done)return a.done?1:-1;
+    var da=a.due||9e15,db=b.due||9e15;
+    if(da!==db)return da-db;
+    return a.created-b.created;
+  });
+  $('taskEmpty').classList.toggle('hidden',shown.length>0);
+  list.classList.toggle('hidden',shown.length===0);
+  shown.forEach(function(t){
+    var row=el('div','item'+(t.done?' on':''));
+    row.appendChild(el('span','box','\u2713'));
+    var tx=el('span','itxt',t.text);
+    if(t.due){
+      var late=!t.done&&t.due<now;
+      tx.appendChild(el('span','due'+(late?' late':''),(late?'atrasada \u00B7 ':'lembrar ')+fmtShort(t.due)+' às '+fmtTime(t.due)));
+    }
+    row.appendChild(tx);
+    var x=el('button','x','\u00D7');
+    x.onclick=function(ev){ev.stopPropagation();if(confirm('Apagar esta tarefa?')){tasks.splice(tasks.indexOf(t),1);store.set('dl_tasks',tasks);renderTasks();}};
+    row.appendChild(x);
+    row.onclick=function(){t.done=!t.done;store.set('dl_tasks',tasks);renderTasks();};
+    list.appendChild(row);
+  });
+}
+$('btnAddTask').onclick=function(){
+  var txt=$('tText').value.replace(/^\s+|\s+$/g,'');
+  if(!txt){toast('Escreva a tarefa primeiro');return;}
+  tasks.push({id:uid(),text:txt,done:false,created:Date.now(),due:parseLocal($('tDue').value),notified:false});
+  store.set('dl_tasks',tasks);
+  $('tText').value='';$('tDue').value='';
+  renderTasks();
+};
+(function(){
+  var bs=document.querySelectorAll('.seg-b'),i;
+  for(i=0;i<bs.length;i++){
+    (function(b){b.onclick=function(){
+      tFilter=b.getAttribute('data-f');
+      var j;for(j=0;j<bs.length;j++){bs[j].classList.toggle('active',bs[j]===b);}
+      renderTasks();
+    };})(bs[i]);
+  }
+})();
+function showBanner(msg){
+  var b=$('banner');b.textContent=msg+'  (toque para fechar)';b.classList.remove('hidden');
+  b.onclick=function(){b.classList.add('hidden');};
+  if(navigator.vibrate){try{navigator.vibrate(200);}catch(e){}}
+}
+function checkReminders(){
+  if(locked)return;
+  var now=Date.now(),fired=[];
+  tasks.forEach(function(t){
+    if(!t.done&&t.due&&t.due<=now&&!t.notified){t.notified=true;fired.push(t.text);}
+  });
+  if(fired.length){
+    store.set('dl_tasks',tasks);
+    showBanner('\uD83D\uDD6F Lembrete: '+fired.join(' \u2022 '));
+    if(lastView==='tasks')renderTasks();
+  }
+}
+setInterval(checkReminders,30000);
+
+/* ================= Músicas ================= */
+var audio=$('audio');
+var tracks=store.get('dl_tracks',[]);
+var db=null,cur=-1,objUrl=null,shuffle=false,repeat='all';
+var audioUnlocked=false,silentActive=false,seekDrag=false;
+function openDB(cb){
+  if(db){cb(null);return;}
+  if(!window.indexedDB){cb('Este navegador não tem IndexedDB.');return;}
+  var r;
+  try{r=indexedDB.open('dl_music',1);}catch(e){cb('Não consegui abrir o armazenamento de músicas.');return;}
+  r.onupgradeneeded=function(e){var d=e.target.result;if(!d.objectStoreNames.contains('tracks'))d.createObjectStore('tracks',{keyPath:'id'});};
+  r.onsuccess=function(e){db=e.target.result;cb(null);};
+  r.onerror=function(){cb('Não consegui abrir o armazenamento de músicas.');};
+}
+function putTrack(rec,cb){
+  openDB(function(err){
+    if(err){cb(err);return;}
+    var tx=db.transaction('tracks','readwrite');
+    tx.objectStore('tracks').put(rec);
+    tx.oncomplete=function(){cb(null);};
+    tx.onerror=function(){cb('erro');};
+    tx.onabort=function(){cb('erro');};
+  });
+}
+function getBlob(id,cb){
+  openDB(function(err){
+    if(err){cb(null);return;}
+    var req=db.transaction('tracks','readonly').objectStore('tracks').get(id);
+    req.onsuccess=function(){var r=req.result;cb(r?new Blob([r.data],{type:r.type}):null);};
+    req.onerror=function(){cb(null);};
+  });
+}
+function delTrackData(id){
+  openDB(function(err){if(err)return;db.transaction('tracks','readwrite').objectStore('tracks').delete(id);});
+}
+function silentUrl(){
+  var n=800,buf2=new ArrayBuffer(44+n),v=new DataView(buf2),i;
+  function w(o,s){var k;for(k=0;k<s.length;k++)v.setUint8(o+k,s.charCodeAt(k));}
+  w(0,'RIFF');v.setUint32(4,36+n,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);
+  v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,8000,true);v.setUint32(28,8000,true);
+  v.setUint16(32,1,true);v.setUint16(34,8,true);w(36,'data');v.setUint32(40,n,true);
+  for(i=0;i<n;i++)v.setUint8(44+i,128);
+  return URL.createObjectURL(new Blob([buf2],{type:'audio/wav'}));
+}
+/* O iOS só deixa tocar áudio se o play() vier de um toque. Este "destrava" o player. */
+function unlockAudio(){
+  if(audioUnlocked)return;
+  audioUnlocked=true;silentActive=true;
+  audio.src=silentUrl();
+  var p=audio.play();if(p&&p.catch)p.catch(function(){});
+}
+function fmtT(s){if(!isFinite(s)||s<0)s=0;s=Math.floor(s);return Math.floor(s/60)+':'+pad2(s%60);}
+function updateSeek(){
+  if(silentActive)return;
+  $('tCur').textContent=fmtT(audio.currentTime);
+  $('tDur').textContent=fmtT(audio.duration);
+  if(!seekDrag&&isFinite(audio.duration)&&audio.duration>0){$('seek').value=Math.round(audio.currentTime/audio.duration*1000);}
+}
+function updPlayBtn(){$('bPlay').textContent=(audio.paused||silentActive)?'\u25B6\uFE0E':'\u275A\u275A';}
+function hilite(){
+  var rows=$('trackList').children,i;
+  for(i=0;i<rows.length;i++){rows[i].classList.toggle('now',i===cur);}
+  $('npTitle').textContent=(cur>=0&&tracks[cur])?tracks[cur].name:'Nenhuma música tocando';
+}
+function playIndex(i){
+  if(!tracks.length||i<0||i>=tracks.length)return;
+  cur=i;hilite();
+  var tr=tracks[i];
+  getBlob(tr.id,function(blob){
+    if(cur!==i)return;
+    if(!blob){toast('Arquivo não encontrado. Adicione de novo.');return;}
+    if(objUrl)URL.revokeObjectURL(objUrl);
+    objUrl=URL.createObjectURL(blob);
+    silentActive=false;
+    audio.src=objUrl;
+    var p=audio.play();
+    if(p&&p.catch)p.catch(function(){toast('Toque em \u25B6 para tocar');});
+  });
+}
+function pickNext(auto){
+  var n=tracks.length;if(!n)return -1;
+  if(shuffle&&n>1){var r;do{r=Math.floor(Math.random()*n);}while(r===cur);return r;}
+  var nx=cur+1;
+  if(nx>=n){if(repeat==='all'||!auto)return 0;return -1;}
+  return nx;
+}
+function onEnded(){
+  if(silentActive)return;
+  if(repeat==='one'){audio.currentTime=0;audio.play();return;}
+  var nx=pickNext(true);
+  if(nx<0){updPlayBtn();return;}
+  playIndex(nx);
+}
+audio.addEventListener('timeupdate',updateSeek);
+audio.addEventListener('loadedmetadata',updateSeek);
+audio.addEventListener('play',updPlayBtn);
+audio.addEventListener('pause',updPlayBtn);
+audio.addEventListener('ended',onEnded);
+audio.addEventListener('error',function(){if(!silentActive&&cur>=0)toast('Não consegui tocar esse arquivo.');});
+
+$('bPlay').onclick=function(){
+  unlockAudio();
+  if(cur<0){if(tracks.length)playIndex(0);return;}
+  if(audio.paused){if(silentActive)playIndex(cur);else{var p=audio.play();if(p&&p.catch)p.catch(function(){});}}
+  else audio.pause();
+};
+$('bNext').onclick=function(){unlockAudio();var nx=pickNext(false);if(nx>=0)playIndex(nx);};
+$('bPrev').onclick=function(){
+  unlockAudio();
+  if(cur>=0&&audio.currentTime>3&&!silentActive){audio.currentTime=0;return;}
+  if(!tracks.length)return;
+  playIndex(cur<=0?tracks.length-1:cur-1);
+};
+$('bShuf').onclick=function(){shuffle=!shuffle;$('bShuf').classList.toggle('on',shuffle);toast(shuffle?'Aleatório ligado':'Aleatório desligado');};
+$('bRep').onclick=function(){
+  repeat=repeat==='all'?'one':(repeat==='one'?'off':'all');
+  $('bRep').textContent=repeat==='one'?'\u21BB1':'\u21BB';
+  $('bRep').classList.toggle('on',repeat!=='off');
+  toast(repeat==='all'?'Repetir a lista':(repeat==='one'?'Repetir uma música':'Sem repetição'));
+};
+$('bRep').classList.add('on');
+(function(){
+  var s=$('seek');
+  s.addEventListener('touchstart',function(){seekDrag=true;});
+  s.addEventListener('mousedown',function(){seekDrag=true;});
+  s.addEventListener('input',function(){if(isFinite(audio.duration))$('tCur').textContent=fmtT(s.value/1000*audio.duration);});
+  s.addEventListener('change',function(){
+    if(isFinite(audio.duration)&&!silentActive)audio.currentTime=s.value/1000*audio.duration;
+    seekDrag=false;
+  });
+})();
+function cleanName(n){return n.replace(/\.[^.]+$/,'').replace(/_/g,' ');}
+function setMsg(t){$('musicMsg').textContent=t;}
+function renderMusic(){
+  var list=$('trackList');list.innerHTML='';
+  $('trackEmpty').classList.toggle('hidden',tracks.length>0);
+  list.classList.toggle('hidden',tracks.length===0);
+  tracks.forEach(function(t,i){
+    var row=el('div','track');
+    row.appendChild(el('span','tn',t.name));
+    row.appendChild(el('span','ts',(t.size/1048576).toFixed(1)+' MB'));
+    var x=el('button','x','\u00D7');
+    x.onclick=function(ev){
+      ev.stopPropagation();
+      if(!confirm('Remover "'+t.name+'"?'))return;
+      var idx=tracks.indexOf(t);
+      delTrackData(t.id);tracks.splice(idx,1);store.set('dl_tracks',tracks);
+      if(idx===cur){audio.pause();cur=-1;}else if(idx<cur){cur--;}
+      renderMusic();
+    };
+    row.appendChild(x);
+    row.onclick=function(){unlockAudio();playIndex(tracks.indexOf(t));};
+    list.appendChild(row);
+  });
+  hilite();updPlayBtn();
+}
+function addFiles(files){
+  var arr=[],i;for(i=0;i<files.length;i++)arr.push(files[i]);
+  var idx=0,added=0;
+  function next(){
+    if(idx>=arr.length){setMsg(added+' música(s) adicionada(s) \u2726');renderMusic();return;}
+    var f=arr[idx];
+    setMsg('Adicionando '+(idx+1)+' de '+arr.length+': '+f.name);
+    var fr=new FileReader();
+    fr.onload=function(){
+      var id=uid();
+      putTrack({id:id,type:f.type||'audio/mpeg',data:fr.result},function(err){
+        if(err){setMsg('Parei em "'+f.name+'": não coube no armazenamento do navegador.');renderMusic();return;}
+        tracks.push({id:id,name:cleanName(f.name),size:f.size});
+        store.set('dl_tracks',tracks);added++;idx++;next();
+      });
+    };
+    fr.onerror=function(){setMsg('Não consegui ler '+f.name);idx++;next();};
+    fr.readAsArrayBuffer(f);
+  }
+  next();
+}
+$('fileIn').onchange=function(){
+  if(this.files&&this.files.length)addFiles(this.files);
+  this.value='';
+};
+
+/* ================= Refeições ================= */
+var PLAN=[
+{id:'m10',time:'10:00',title:'Desjejum / Pré-treino',items:[
+  {id:'m10a',t:'Iogurte zero (1 un.) + 1 fruta picada (mamão, melão, maçã) 200 g / 1 un. Salpicar mix de fibras',k:231},
+  {id:'m10b',t:'Atividade física (caminhada, bike) 1 h, segunda a sexta + hidratação: 1 litro pela manhã, água ou limonada com sucralose',k:0}],
+ obs:'Opção 2: suco nutritivo (500 ml pela manhã). Porcionar pacotes e congelar com couve (1/2 folha), maçã (1/4), pepino (2 fatias), cenoura (3 fatias), mix de fibras (1 col. sopa) e 1 limão/laranja espremido. Bater tudo com 500 ml de água e tomar durante a manhã ou tarde, sem coar. As frutas podem variar entre abacaxi, melão, morango, kiwi, pera (40 g) + salsinha.'},
+{id:'m13',time:'13:00',title:'Almoço (1 a 2 copos de água antes)',items:[
+  {id:'m13a',t:'Vegetais refogados, pelo menos 1 tipo (abobrinha, abóbora, vagem, repolho, cenoura, couve, brócolis): 2 col. servir / 120 g',k:42.49},
+  {id:'m13b',t:'Salada crua à vontade (alface, rúcula, couve, repolho, acelga, tomate, pepino ou outras folhas). Fechar 50% do prato',k:4.5},
+  {id:'m13c',t:'Arroz parboilizado com cenoura (1,5 col. servir) OU batata cozida/airfryer/purê 130 g OU polenta (2 col. servir). Evitar massas durante a semana',k:76.76},
+  {id:'m13d',t:'Feijão cozido (1 concha)',k:52.46},
+  {id:'m13e',t:'Frango (sassami, peito, coxa) 120 g OU peixe grelhado (tilápia, atum ralado em água) 140 g OU lombo suíno 110 g OU bovina (patinho moído, coxão mole) 110 g. Reduzir carne vermelha: 1 vez na semana',k:207.6},
+  {id:'m13f',t:'Evitar bebida junto da refeição; depois, 1 copo de suco clight ou limonada com sucralose',k:36}],
+ obs:'Consumir variedade de vegetais refogados, crus e hortaliças, representando 50% do prato.'},
+{id:'m17',time:'17:00',title:'Lanche da tarde',items:[
+  {id:'m17a',t:'Shake: whey isolado (1 dose) + leite semidesnatado (300 ml) + mix de fibras + morangos congelados (4 un.) OU banana (1 un.)',k:110.79}],
+ obs:'Montar o shake e tomar antes de sair para a aula. Opção 2: sanduíche proteico com 2 fatias de pão integral + 2 ovos OU atum drenado (1/2 lata) OU frango desfiado (2 col. sopa) + cenoura ralada + requeijão light. Montar aberto no prato com bastante salada, para dar saciedade.'},
+{id:'m20',time:'20:00',title:'Jantar / Faculdade',items:[
+  {id:'m20a',t:'Repolho refogado (3 col. servir) OU chuchu cozido (130 g) + saladas cruas à vontade (tomate, alface, pepino etc.)',k:31.05},
+  {id:'m20b',t:'Frango (coxa, peito, sassami) 120 g OU lombo suíno 110 g OU bovina magra (patinho moído, panela) 110 g OU peixe grelhado 140 g OU sardinha sem óleo (1 lata)',k:332.4},
+  {id:'m20c',t:'Arroz integral (1 col. servir) OU batata 110 g cozida/purê/assada OU polenta (1,5 col. servir). No restaurante da faculdade, preferir arroz integral e carnes grelhadas',k:155.4},
+  {id:'m20d',t:'Feijão cozido (100 g)',k:61}],
+ obs:'Reduzir o carboidrato à noite e aumentar os vegetais (menos raízes), refogados e saladas.'},
+{id:'m22',time:'22:00',title:'Em casa',items:[
+  {id:'m22a',t:'Rap10 Fit (1 un.) OU pão francês sem miolo (1 un.) OU arroz com cenoura (1 col. servir)',k:114},
+  {id:'m22b',t:'Omelete/ovo cozido (2 un.) OU frango (coxa, sassami) 80 g OU sardinha sem óleo (1 lata) OU hambúrguer caseiro (1 un.)',k:314.1},
+  {id:'m22c',t:'Salada crua à vontade (cenoura, alface, pepino, tomate, couve, escarola, acelga, rúcula)',k:4.5}],
+ obs:'Foi incluída a refeição das 20h para reduzir a das 22h. Reduzir o volume neste horário, para dormir melhor e reduzir o peso. Conforme o estômago diminuir, ficar com uma refeição só à noite. Pode fazer omelete com vegetais ralados OU sopa de vegetais com carne moída ou frango. Opção 2: 200 g de frutas (mamão, melão, melancia, pera) + whey protein (1/2 dosador) com leite semidesnatado.'}
+];
+var TOTAL_ITEMS=0;PLAN.forEach(function(m){TOTAL_ITEMS+=m.items.length;});
+var KCAL_GOAL=1800,WATER_GOAL=3500;
+var food=store.get('dl_food',{});
+var fDate=new Date();fDate.setHours(12,0,0,0);
+function isToday(d){return dayKey(d)===dayKey(new Date());}
+function fday(key){return food[key]||{c:{},w:0,n:{}};}
+function ftouch(key){if(!food[key])food[key]={c:{},w:0,n:{}};return food[key];}
+function saveFood(){store.set('dl_food',food);}
+function fmtL(ml){return String(ml/1000).replace('.',',')+' L';}
+function kOf(d){var s=0;PLAN.forEach(function(m){m.items.forEach(function(it){if(d.c[it.id])s+=it.k;});});return s;}
+function updateFoodSummary(){
+  var d=fday(dayKey(fDate)),k=kOf(d);
+  $('kVal').textContent=Math.round(k);
+  $('kBar').style.width=Math.min(100,k/KCAL_GOAL*100)+'%';
+  $('wVal').textContent=fmtL(d.w);
+  $('wBar').style.width=Math.min(100,d.w/WATER_GOAL*100)+'%';
+}
+function toggleItem(id,row){
+  var d=ftouch(dayKey(fDate));
+  if(d.c[id]){delete d.c[id];row.classList.remove('on');}else{d.c[id]=1;row.classList.add('on');}
+  saveFood();updateFoodSummary();renderWeek();
+}
+var noteTimer=null;
+function noteChange(mid,val){
+  clearTimeout(noteTimer);
+  var key=dayKey(fDate);
+  noteTimer=setTimeout(function(){var d=ftouch(key);d.n[mid]=val;saveFood();},500);
+}
+function renderWeek(){
+  var box=$('week');box.innerHTML='';
+  var i;
+  for(i=0;i<7;i++){
+    var d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-i);
+    var fd=fday(dayKey(d)),n=0,k;
+    for(k in fd.c){if(fd.c.hasOwnProperty(k))n++;}
+    var row=el('div','wk');
+    row.appendChild(el('span','',(i===0?'hoje':DIAS[d.getDay()].slice(0,3))+' '+fmtShort(d.getTime())));
+    row.appendChild(el('span','',n+'/'+TOTAL_ITEMS+' itens'));
+    row.appendChild(el('span','',Math.round(kOf(fd))+' kcal'));
+    row.appendChild(el('span','',fmtL(fd.w)));
+    box.appendChild(row);
+  }
+}
+function renderFood(){
+  var key=dayKey(fDate),d=fday(key);
+  $('fDate').textContent=fmtDate(fDate.getTime())+(isToday(fDate)?' \u00B7 hoje':'');
+  $('fNext').disabled=isToday(fDate);
+  var box=$('meals');box.innerHTML='';
+  PLAN.forEach(function(m){
+    var card=el('div','card');
+    var h=el('div','meal-h');h.appendChild(el('span','meal-time',m.time));h.appendChild(el('span','meal-title',m.title));
+    card.appendChild(h);
+    m.items.forEach(function(it){
+      var row=el('div','item'+(d.c[it.id]?' on':''));
+      row.appendChild(el('span','box','\u2713'));
+      row.appendChild(el('span','itxt',it.t));
+      if(it.k)row.appendChild(el('span','ik',Math.round(it.k)+' kcal'));
+      row.onclick=function(){toggleItem(it.id,row);};
+      card.appendChild(row);
+    });
+    if(m.obs)card.appendChild(el('div','obs',m.obs));
+    var ta=el('textarea','meal-note');ta.placeholder='Trocas, extras, como foi...';ta.value=d.n[m.id]||'';
+    ta.oninput=function(){noteChange(m.id,ta.value);};
+    card.appendChild(ta);
+    box.appendChild(card);
+  });
+  updateFoodSummary();renderWeek();
+}
+function moveDay(delta){
+  var n=new Date(fDate.getTime());n.setDate(n.getDate()+delta);
+  if(n.getTime()>Date.now()+43200000)return;
+  fDate=n;renderFood();
+}
+$('fPrev').onclick=function(){moveDay(-1);};
+$('fNext').onclick=function(){moveDay(1);};
+$('fToday').onclick=function(){fDate=new Date();fDate.setHours(12,0,0,0);renderFood();};
+$('wPlus').onclick=function(){var d=ftouch(dayKey(fDate));d.w+=250;saveFood();updateFoodSummary();renderWeek();};
+$('wMinus').onclick=function(){var d=ftouch(dayKey(fDate));d.w=Math.max(0,d.w-250);saveFood();updateFoodSummary();renderWeek();};
+
+/* ================= Ajustes ================= */
+$('btnSettings').onclick=function(){$('settings').classList.remove('hidden');};
+$('sClose').onclick=function(){$('settings').classList.add('hidden');};
+$('sExport').onclick=function(){
+  saveNow();
+  var o={v:1,entries:entries,tasks:tasks,food:food};
+  var b=$('sBox');b.value=JSON.stringify(o);b.focus();b.select();
+  try{b.setSelectionRange(0,b.value.length);}catch(e){}
+  toast('Backup gerado. Copie o texto.');
+};
+$('sImport').onclick=function(){
+  var o;
+  try{o=JSON.parse($('sBox').value);if(!o||!(o.entries instanceof Array))throw new Error('x');}
+  catch(e){toast('Texto de backup inválido');return;}
+  if(!confirm('Substituir os dados atuais por este backup?'))return;
+  entries=o.entries;tasks=o.tasks instanceof Array?o.tasks:[];food=o.food||{};
+  store.set('dl_entries',entries);store.set('dl_tasks',tasks);store.set('dl_food',food);
+  curId=null;$('diaryEditor').classList.add('hidden');$('diaryList').classList.remove('hidden');
+  $('settings').classList.add('hidden');
+  showView(lastView);toast('Backup restaurado \u2726');
+};
+$('sPin').onclick=function(){
+  var p=$('sNewPin').value;
+  if(!/^\d{4}$/.test(p)){toast('Use exatamente 4 números');return;}
+  store.set('dl_pin',hash(p));$('sNewPin').value='';toast('PIN alterado \u2726');
+};
+
+/* ================= Ciclo de vida ================= */
+var hiddenAt=0;
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden){hiddenAt=Date.now();saveNow();}
+  else{
+    if(hiddenAt&&Date.now()-hiddenAt>120000&&!locked)lockNow();
+    hiddenAt=0;checkReminders();
+  }
+});
+window.addEventListener('pagehide',saveNow);
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
+})();
+</script>
+</body>
+</html>
