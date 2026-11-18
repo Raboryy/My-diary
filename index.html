@@ -212,7 +212,26 @@ details.card ul{margin:10px 0 0;padding-left:20px;line-height:1.55;}
     <!-- MÚSICAS -->
     <section id="v-music" class="view hidden">
       <div class="row-head"><h2>Trilha sonora</h2>
-        <label class="btn file-btn">&#65291; Adicionar músicas<input id="fileIn" type="file" accept="audio/*" multiple></label>
+        <div>
+          <button id="btnDriveOpen" class="btn">&#9729;&#xFE0E; Drive</button>
+          <button id="btnLinkOpen" class="btn ghost">&#128279; Link</button>
+          <label class="btn file-btn ghost">&#65291; Arquivo<input id="fileIn" type="file" accept="audio/*" multiple></label>
+        </div>
+      </div>
+      <div id="driveBox" class="card hidden">
+        <h3>Pasta do Google Drive</h3>
+        <p class="hint">O app lê todas as músicas de uma pasta do seu Drive e toca por streaming. Depois de configurar, é só colocar músicas novas na pasta.</p>
+        <span class="lbl">Chave de API do Google</span>
+        <input id="driveKey" class="field" placeholder="AIza..." autocapitalize="off" autocorrect="off">
+        <div style="margin-top:10px"><span class="lbl">Link ou ID da pasta</span>
+        <input id="driveFolder" class="field" placeholder="https://drive.google.com/drive/folders/..." autocapitalize="off" autocorrect="off"></div>
+        <button id="btnDriveSave" class="btn full">&#10022; Salvar e sincronizar</button>
+      </div>
+      <div id="linkBox" class="card hidden">
+        <h3>Adicionar por link</h3>
+        <p class="hint">Cole um link direto de música (termina em .mp3 ou .m4a), um por linha. Pode ser também um caminho do seu próprio site, como <b>musicas/minha-musica.mp3</b>.</p>
+        <textarea id="linkText" class="field" style="height:110px;font-size:14px" placeholder="https://...mp3"></textarea>
+        <button id="btnLinkAdd" class="btn full">&#10022; Adicionar</button>
       </div>
       <div id="musicMsg" class="hint"></div>
       <div class="card">
@@ -228,7 +247,7 @@ details.card ul{margin:10px 0 0;padding-left:20px;line-height:1.55;}
         </div>
       </div>
       <div id="trackList" class="card"></div>
-      <div id="trackEmpty" class="empty">Sem músicas ainda.<br>Toque em "Adicionar músicas" e escolha arquivos .mp3 ou .m4a.</div>
+      <div id="trackEmpty" class="empty">Sem músicas ainda.<br>Toque em "Por link" e cole o endereço de arquivos .mp3 ou .m4a.</div>
       <audio id="audio" preload="auto"></audio>
     </section>
 
@@ -372,7 +391,7 @@ function showView(n){
   $('main').scrollTop=0;
   if(n==='diary'){if(!curId)renderDiary();}
   else if(n==='tasks'){renderTasks();}
-  else if(n==='music'){renderMusic();}
+  else if(n==='music'){renderMusic();if(driveCfg.key&&driveCfg.folder&&!driveSynced){driveSynced=true;driveSync();}}
   else if(n==='food'){renderFood();}
 }
 VIEWS.forEach(function(v){$('tab-'+v).onclick=function(){showView(v);};});
@@ -587,6 +606,14 @@ function playIndex(i){
   if(!tracks.length||i<0||i>=tracks.length)return;
   cur=i;hilite();
   var tr=tracks[i];
+  if(tr.stream){
+    if(objUrl){URL.revokeObjectURL(objUrl);objUrl=null;}
+    silentActive=false;
+    audio.src=tr.drive?driveUrl(tr.drive):tr.url;
+    var sp=audio.play();
+    if(sp&&sp.catch)sp.catch(function(){toast('Toque em ▶ para tocar');});
+    return;
+  }
   getBlob(tr.id,function(blob){
     if(cur!==i)return;
     if(!blob){toast('Arquivo não encontrado. Adicione de novo.');return;}
@@ -659,7 +686,7 @@ function renderMusic(){
   tracks.forEach(function(t,i){
     var row=el('div','track');
     row.appendChild(el('span','tn',t.name));
-    row.appendChild(el('span','ts',(t.size/1048576).toFixed(1)+' MB'));
+    row.appendChild(el('span','ts',t.drive?'drive':(t.stream?'link':(t.size/1048576).toFixed(1)+' MB')));
     var x=el('button','x','\u00D7');
     x.onclick=function(ev){
       ev.stopPropagation();
@@ -699,6 +726,98 @@ function addFiles(files){
 $('fileIn').onchange=function(){
   if(this.files&&this.files.length)addFiles(this.files);
   this.value='';
+};
+/* ---- por link: tenta baixar para tocar offline; se o site não deixar, toca por streaming ---- */
+function nameFromUrl(u){
+  var s=u.split('?')[0].split('#')[0].split('/').pop()||u;
+  try{s=decodeURIComponent(s);}catch(e){}
+  return cleanName(s)||'Música';
+}
+function addLinks(text){
+  var urls=text.split(/\s*\n\s*/).filter(function(u){return /\S/.test(u);}).map(function(u){return u.replace(/^\s+|\s+$/g,'');});
+  var idx=0,added=0;
+  function done(){setMsg(added+' música(s) adicionada(s) ✦');renderMusic();}
+  function addStream(u){
+    tracks.push({id:uid(),name:nameFromUrl(u),size:0,stream:true,url:u});
+    store.set('dl_tracks',tracks);added++;idx++;next();
+  }
+  function next(){
+    if(idx>=urls.length){done();return;}
+    var u=urls[idx];
+    setMsg('Adicionando '+(idx+1)+' de '+urls.length+'...');
+    if(!window.fetch){addStream(u);return;}
+    fetch(u).then(function(r){
+      if(!r.ok)throw new Error('http');
+      var ct=r.headers.get('content-type')||'audio/mpeg';
+      return r.arrayBuffer().then(function(buf){return {buf:buf,ct:ct};});
+    }).then(function(o){
+      var id=uid();
+      putTrack({id:id,type:o.ct,data:o.buf},function(err){
+        if(err){addStream(u);return;}
+        tracks.push({id:id,name:nameFromUrl(u),size:o.buf.byteLength});
+        store.set('dl_tracks',tracks);added++;idx++;next();
+      });
+    }).catch(function(){addStream(u);});
+  }
+  next();
+}
+$('btnLinkOpen').onclick=function(){$('linkBox').classList.toggle('hidden');};
+
+/* ---- Google Drive: lista uma pasta pública (qualquer pessoa com o link) e toca por streaming ---- */
+var driveCfg=store.get('dl_drive',{key:'',folder:''});
+var driveSynced=false;
+function driveUrl(id){return 'https://www.googleapis.com/drive/v3/files/'+id+'?alt=media&key='+encodeURIComponent(driveCfg.key);}
+function isAudioFile(f){return /^audio\//.test(f.mimeType||'')||/\.(mp3|m4a|aac|wav|ogg|flac)$/i.test(f.name||'');}
+function driveList(pageToken,acc,cb){
+  var q="'"+driveCfg.folder+"' in parents and trashed=false";
+  var u='https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+
+    '&fields='+encodeURIComponent('nextPageToken,files(id,name,size,mimeType)')+
+    '&pageSize=1000&orderBy=name&key='+encodeURIComponent(driveCfg.key)+
+    (pageToken?'&pageToken='+encodeURIComponent(pageToken):'');
+  fetch(u).then(function(r){
+    return r.json().then(function(j){return {ok:r.ok,j:j};});
+  }).then(function(o){
+    if(!o.ok){cb((o.j&&o.j.error&&o.j.error.message)||'erro desconhecido',null);return;}
+    acc=acc.concat(o.j.files||[]);
+    if(o.j.nextPageToken)driveList(o.j.nextPageToken,acc,cb);else cb(null,acc);
+  }).catch(function(){cb('sem conexão com o Google Drive',null);});
+}
+function driveSync(){
+  if(!window.fetch){setMsg('Este navegador não suporta a sincronização.');return;}
+  setMsg('Sincronizando com o Drive...');
+  driveList(null,[],function(err,files){
+    if(err){setMsg('Drive: '+err);return;}
+    var curTr=cur>=0?tracks[cur]:null;
+    var old={};tracks.forEach(function(t){if(t.drive)old[t.drive]=t;});
+    var keep=tracks.filter(function(t){return !t.drive;});
+    var n=0;
+    files.filter(isAudioFile).forEach(function(f){
+      keep.push(old[f.id]||{id:'gd_'+f.id,name:cleanName(f.name),size:0,stream:true,drive:f.id});n++;
+    });
+    tracks=keep;store.set('dl_tracks',tracks);
+    cur=curTr?tracks.indexOf(curTr):-1;
+    if(curTr&&cur<0)audio.pause();
+    setMsg(n+' música(s) do Drive ✦');renderMusic();
+  });
+}
+$('btnDriveOpen').onclick=function(){
+  $('driveKey').value=driveCfg.key;$('driveFolder').value=driveCfg.folder;
+  $('driveBox').classList.toggle('hidden');
+};
+$('btnDriveSave').onclick=function(){
+  var k=$('driveKey').value.replace(/\s+/g,'');
+  var f=$('driveFolder').value.replace(/^\s+|\s+$/g,'');
+  var m=/folders\/([\w-]+)/.exec(f);
+  if(m)f=m[1];
+  f=f.split('?')[0];
+  if(!k||!f){toast('Preencha a chave e a pasta');return;}
+  driveCfg={key:k,folder:f};store.set('dl_drive',driveCfg);
+  $('driveBox').classList.add('hidden');driveSynced=true;driveSync();
+};
+$('btnLinkAdd').onclick=function(){
+  var t=$('linkText').value;
+  if(!/\S/.test(t)){toast('Cole pelo menos um link');return;}
+  addLinks(t);$('linkText').value='';$('linkBox').classList.add('hidden');
 };
 
 /* ================= Refeições ================= */
